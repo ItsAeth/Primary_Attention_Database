@@ -21,7 +21,9 @@ CREATE TABLE IF NOT EXISTS empleados(
 	fecha_nacimiento DATE NOT NULL,
 	sexo TEXT NOT NULL,
 	email TEXT,
-	domicilio TEXT NOT NULL,
+	pais_nac TEXT DEFAULT 'ZZZ' NOT NULL,
+	reside_cp TEXT NOT NULL,
+	reside_muni TEXT NOT NULL,
 
 	CONSTRAINT tipo_id_es_valido CHECK (tipo_id IN ('DNI','NIE')),
 	CONSTRAINT num_id_es_valido CHECK (
@@ -36,7 +38,10 @@ CREATE TABLE IF NOT EXISTS empleados(
 	),
 	CONSTRAINT empleado_mayor_de_edad CHECK (fecha_nacimiento <= CURRENT_DATE - INTERVAL '18 years'),
 	CONSTRAINT sexo_es_valido CHECK (sexo IN ('Masculino', 'Femenino', 'No especificado')),
-	CONSTRAINT email_es_valido CHECK (email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
+	CONSTRAINT email_es_valido CHECK (email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
+	CONSTRAINT pais_nac_es_valido CHECK (length(pais_nac) = 3),
+	CONSTRAINT reside_cp CHECK (length(reside_cp) = 3 OR reside_cp ~ '^53[0-9]{3}'),
+	CONSTRAINT reside_muni CHECK (length(reside_muni) = 3 OR reside_muni ~ '^530[0-9]{3}')
 );
 
 -- Teléfonos fijos (F) y móviles (M).
