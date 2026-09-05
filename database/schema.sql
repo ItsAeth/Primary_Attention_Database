@@ -5,12 +5,8 @@ MOTOR: PostgreSQL v18
 
 /*
 EMPLEADOS DEL CENTRO
-Considera posibilidad de DNI duplicado y email compartidos.
-
-	Si el Nº de identificación es información sensible, ¿deberia ir cifrado?
-	Separar el domicilio en varios campos con codigos ISO
+	Considera posibilidad de DNI duplicado y email compartidos.
 */
-
 CREATE TABLE IF NOT EXISTS empleados(
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	tipo_id TEXT NOT NULL,
@@ -37,114 +33,160 @@ CREATE TABLE IF NOT EXISTS empleados(
 		(apellido2 !~ '[0-9]' OR apellido2 IS NULL)
 	),
 	CONSTRAINT empleado_mayor_de_edad CHECK (fecha_nacimiento <= CURRENT_DATE - INTERVAL '18 years'),
-	CONSTRAINT sexo_es_valido CHECK (sexo IN ('Masculino', 'Femenino', 'No especificado')),
+	CONSTRAINT sexo_es_valido CHECK (sexo IN ('Varón', 'Mujer', 'No especificado')),
 	CONSTRAINT email_es_valido CHECK (email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
-	CONSTRAINT pais_nac_es_valido CHECK (length(pais_nac) = 3),
+	CONSTRAINT pais_nac_es_valido CHECK (length(pais_nac) = 3 OR pais_nac = "ZZZ"),
 	CONSTRAINT reside_cp CHECK (length(reside_cp) = 3 OR reside_cp ~ '^53[0-9]{3}'),
 	CONSTRAINT reside_muni CHECK (length(reside_muni) = 3 OR reside_muni ~ '^530[0-9]{3}')
 );
 
--- Teléfonos fijos (F) y móviles (M).
-CREATE TABLE IF NOT EXISTS tlfno_empleados(
-	id_tlfno BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+-- Teléfonos fijos y móviles de empleados. Formato con E.164 estricto (Ej. +34612345678)
+CREATE TABLE IF NOT EXISTS tlf_empleados(
+	id_tlf BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_empleado BIGINT NOT NULL,
-	tipo CHAR(1) NOT NULL CHECK (tipo IN ('F', 'M')),
-	tlf VARCHAR(16) NOT NULL CHECK (tlf ~ '^\+[0-9]{1,15}$'),
+	tipo_tlf TEXT NOT NULL,
+	num_tlf TEXT NOT NULL,
 
-	FOREIGN KEY (id_empleado) REFERENCES empleados(id)
+	FOREIGN KEY (id_empleado) REFERENCES empleados(id),
+
+	CONSTRAINT tipo_tlf_es_valido CHECK (tipo_tlf IN ('Fijo', 'Móvil')),
+	CONSTRAINT num_tlf_es_valido CHECK (num_tlf ~ '^\+[1-9][0-9]{1,14}$'),
 );
 
--- Información especifica de empleados sanitarios.
--- Añadir horario de atención en pacientes mediante cita (no incluye urgencias)
+/* 
+Información especifica de empleados sanitarios.
+	Sería necesaria una tabla para verificar que las especialidades sean válidas
+*/
 CREATE TABLE IF NOT EXISTS info_sanitarios(
 	id_sanitario BIGINT PRIMARY KEY,
-	num_colegiado CHAR(9) NOT NULL,
+	cias TEXT NOT NULL,
+	num_colegiado TEXT NOT NULL,
 	especialidad TEXT NOT NULL,
 
-	FOREIGN KEY (id_sanitario) REFERENCES empleados(id)
+	FOREIGN KEY (id_sanitario) REFERENCES empleados(id),
+
+	CONSTRAINT cias_es_valido CHECK (cias ~ '^[0-9]{10}[A-Z]$'),
+	CONSTRAINT num_colegiado_es_valido CHECK (length(num_colegiado) = 9)
 );
 
+/* 
+Pacientes
+	CIP autonómico y nº de historia clínica varian entre comunidades
+	Duplica las restricciones de empleados
+*/
 CREATE TABLE IF NOT EXISTS pacientes (
-    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    tipo_id CHAR(3) NOT NULL CHECK (tipo_id IN ('DNI','NIE')),
-    num_id CHAR(9) UNIQUE NOT NULL CHECK (
-        (tipo_id = 'DNI' AND num_id ~ '^[0-9]{8}[A-Z]$')			-- Igual que con empleados. No valida digito de control
-        OR
-        (tipo_id = 'NIE' AND num_id ~ '^[XYZ][0-9]{7}[A-Z]$')
-    ),
-    fecha_alta TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    nombre TEXT NOT NULL,											-- Igual que empleados
-    apellido1 TEXT NOT NULL,
-    apellido2 TEXT,
-    fecha_nacimiento DATE NOT NULL,									-- No puede ser futura
-    sexo CHAR(1) NOT NULL CHECK (sexo IN ('M','F','I')),			-- DOcumentar
-    domicilio TEXT NOT NULL,										-- separar
-    email TEXT CHECK (
-        email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
-    ),
-    fax VARCHAR(30),
-    cip_aut CHAR(16) UNIQUE NOT NULL,								-- Validar estos campos
-    cip_sns CHAR(16) UNIQUE NOT NULL,
-    nass CHAR(12) UNIQUE NOT NULL,
-    n_hc VARCHAR(20) UNIQUE NOT NULL,
+	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	tipo_id TEXT NOT NULL,
+	num_id TEXT NOT NULL,
+	fecha_alta TIMESTAMPTZ DEFAULT now(),
+	nombre TEXT NOT NULL,
+	apellido1 TEXT NOT NULL,
+	apellido2 TEXT,
+	fecha_nacimiento DATE NOT NULL,
+	sexo TEXT NOT NULL,
+	email TEXT,
+	pais_nac TEXT DEFAULT 'ZZZ' NOT NULL,
+	reside_cp TEXT NOT NULL,
+	reside_muni TEXT NOT NULL,
+	cip_sns TEXT UNIQUE NOT NULL,
+    cip_aut TEXT UNIQUE NOT NULL,
+    nass TEXT UNIQUE NOT NULL,
+    n_hc TEXT UNIQUE NOT NULL,
     med_cabecera BIGINT NOT NULL,
 
     FOREIGN KEY (med_cabecera) REFERENCES empleados(id)
+
+	CONSTRAINT tipo_id_es_valido CHECK (tipo_id IN ('DNI','NIE')),
+	CONSTRAINT num_id_es_valido CHECK (
+		(tipo_id = 'DNI' AND num_id ~ '^[0-9]{8}[A-Z]$') -- No valida si dígito de control es correcto
+		OR
+		(tipo_id = 'NIE' AND num_id ~ '^[XYZ][0-9]{7}[A-Z]$') -- Aqui tampoco.
+	),
+	CONSTRAINT nombre_apellidos_sin_digitos CHECK(
+		(nombre !~ '[0-9]') AND 
+		(apellido1 !~ '[0-9]') AND 
+		(apellido2 !~ '[0-9]' OR apellido2 IS NULL)
+	),
+	CONSTRAINT empleado_mayor_de_edad CHECK (fecha_nacimiento <= CURRENT_DATE - INTERVAL '18 years'),
+	CONSTRAINT sexo_es_valido CHECK (sexo IN ('Varón', 'Mujer', 'No especificado')),
+	CONSTRAINT email_es_valido CHECK (email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
+	CONSTRAINT pais_nac_es_valido CHECK (length(pais_nac) = 3 OR pais_nac = "ZZZ"),
+	CONSTRAINT reside_cp CHECK (length(reside_cp) = 3 OR reside_cp ~ '^53[0-9]{3}'),
+	CONSTRAINT reside_muni CHECK (length(reside_muni) = 3 OR reside_muni ~ '^530[0-9]{3}')
+	CONSTRAINT cip_sns_es_valido CHECK (cip_sns ~ '^B{8}[a-z]{2}[0-9]{6}$')
+	CONSTRAINT nass_es_valido CHECK (nass ~ '^[0-9]{12}$')
 );
 
+-- Teléfonos fijos y móviles de pacientes. Formato con E.164 estricto (Ej. +34612345678)
 CREATE TABLE IF NOT EXISTS tlfno_pacientes(
-	id_tlfno BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	id_paciente BIGINT NOT NULL,
-	tipo CHAR(1) NOT NULL CHECK (tipo IN ('F', 'M')),
-	tlf VARCHAR(16) NOT NULL CHECK (tlf ~ '^\+[0-9]{1,15}$'),
+	id_tlf BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_pacinte BIGINT NOT NULL,
+	tipo_tlf TEXT NOT NULL,
+	num_tlf TEXT NOT NULL,
 
-	FOREIGN KEY (id_paciente) REFERENCES pacientes(id)
+	FOREIGN KEY (id_paciente) REFERENCES pacientes(id),
+
+	CONSTRAINT tipo_tlf_es_valido CHECK (tipo_tlf IN ('Fijo', 'Móvil')),
+	CONSTRAINT num_tlf_es_valido CHECK (num_tlf ~ '^\+[1-9][0-9]{1,14}$'),
 );
 
+/*
+Citas
+	El profesional puede aproximar la hora de fin de la cita y permitiria comprobar que no se solape con otra.
+*/
 CREATE TABLE IF NOT EXISTS citas(
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
 	id_sanitario BIGINT NOT NULL,
-	inicio TIMESTAMP NOT NULL,
-	fin TIMESTAMP,
-	modalidad CHAR(1) NOT NULL CHECK (modalidad IN ('P', 'T')),
+	inicio TIMESTAMPTZ NOT NULL,
+	fin TIMESTAMPTZ,
+	modalidad TEXT NOT NULL 
 	lugar TEXT,
-	estado CHAR(2) NOT NULL CHECK (estado IN ('PA', 'AC', 'CA', 'FN', 'NP')),
+	estado TEXT NOT NULL,
 
 	FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
-	FOREIGN KEY (id_sanitario) REFERENCES empleados (id)
+	FOREIGN KEY (id_sanitario) REFERENCES empleados (id),
+	
+	CONSTRAINT fecha_fin_mayor_inicio CHECK (fin > inicio)
+	CONSTRAINT modalidad_es_valida CHECK (modalidad IN ('Presencial', 'Telemática')),
+	CONSTRAINT estado_es_valido CHECK (estado IN ('Pendiente_aceptación', 'Aceptada', 'Cancelada', 'Finalizada', 'No presentado'))
 );
 
--- Turnos de todo el personal del centro de atención primaria
--- Se consideran turnos nocturnos que incluyen la medianoche.
--- Se pueden añadir una columna de tipo para distinguir si son guardias o turnos normales. 
+/* 
+Turnos (fichaje) de todo el personal del centro
+*/
 CREATE TABLE IF NOT EXISTS turnos(
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	id_sanitario BIGINT NOT NULL,							-- Esto debe ser para empleados en general, tabla correcta pero cambiar el nombre
-	fecha_inicio DATE NOT NULL,								-- No puede ser superior a la actual
-	fecha_fin DATE NOT NULL,								-- No puede ser superior a la actual
-	hora_inicio TIME NOT NULL,
-	hora_fin TIME NOT NULL,
+	id_empleado BIGINT NOT NULL,
+	tipo_turno TEXT NOT NULL,
+	inicio TIMESTAMPTZ NOT NULL,
+	fin TIMESTAMPTZ,
 
-	FOREIGN KEY (id_sanitario) REFERENCES empleados (id)
+	FOREIGN KEY (id_empleado) REFERENCES empleados (id),
 
-);
+	CONSTRAINT tipo_turno_válido CHECK (tipo_turno IN ("Ordinario", "Guardia")),
+	CONSTRAINT fin_mayor_inicio CHECK (fin IS NULL OR fin > inicio)
+)
 
 CREATE TABLE IF NOT EXISTS episodio(
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	tipo CHAR(1) NOT NULL CHECK (tipo IN ('S','E', 'U', 'P', 'A')), -- Documentar esto
+	tipo TEXT NOT NULL,
 	id_paciente BIGINT NOT NULL,
 	id_sanitario BIGINT NOT NULL,
-	fecha_atencion DATE NOT NULL,									-- No superior a la actual
+	fecha_atencion DATE NOT NULL,
 	hora_atencion TIME NOT NULL,
 	hora_alta TIME NOT NULL,
-	nivel_triaje VARCHAR(8) CHECK (nivel_triaje IN ('azul', 'verde', 'amarillo', 'naranja', 'rojo')),
+	nivel_triaje TEXT,
 	diag_snomed TEXT,
 	observaciones TEXT,
-	resultado CHAR(1) CHECK (resultado IN ('A', 'D', 'P')), -- Documentar
+	resultado TEXT,
 
 	FOREIGN KEY (id_paciente) REFERENCES pacientes(id),
-	FOREIGN KEY (id_sanitario) REFERENCES empleados(id)
+	FOREIGN KEY (id_sanitario) REFERENCES empleados(id),
+
+	CONSTRAINT tipo_episodio_valido CHECK (tipo IN ('Seguimiento', 'Consulta', 'Urgencia', 'Prevención', 'Administrativo')),
+	CONSTRAINT nivel_triaje_valido CHECK (nivel_triaje IS NULL OR nivel_triaje IN ('Azul', 'Verde', 'Amarillo', 'Naranja', 'Rojo'))
+	CONSTRAINT resultado_valido CHECK (resultado IN ('Alta', 'Derivación', 'Pruebas')),
 );
 
 -- HCE TESAUROS
