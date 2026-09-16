@@ -23,6 +23,7 @@ Funciones:
 	)
 */
 
+-------------------------------- EMPLEADOS, PERSONAL, ACTIVIDAD ASISTENCIAL 
 /*
 EMPLEADOS DEL CENTRO
 	Considera posibilidad de DNI duplicado y email compartidos.
@@ -40,24 +41,6 @@ CREATE TABLE IF NOT EXISTS empleados(
 	pais_nac TEXT DEFAULT 'ZZZ' NOT NULL,
 	reside_cp TEXT NOT NULL,
 	reside_muni TEXT NOT NULL,
-
-	CONSTRAINT tipo_id_es_valido CHECK (tipo_id IN ('DNI','NIE')),
-	CONSTRAINT num_id_es_valido CHECK (
-		(tipo_id = 'DNI' AND num_id ~ '^[0-9]{8}[A-Z]$') -- No valida si dígito de control es correcto
-		OR
-		(tipo_id = 'NIE' AND num_id ~ '^[XYZ][0-9]{7}[A-Z]$') -- Aqui tampoco.
-	),
-	CONSTRAINT nombre_apellidos_sin_digitos CHECK(
-		(nombre !~ '[0-9]') AND 
-		(apellido1 !~ '[0-9]') AND 
-		(apellido2 !~ '[0-9]' OR apellido2 IS NULL)
-	),
-	CONSTRAINT empleado_mayor_de_edad CHECK (fecha_nacimiento <= CURRENT_DATE - INTERVAL '18 years'),
-	CONSTRAINT sexo_es_valido CHECK (sexo IN ('Varón', 'Mujer', 'No especificado')),
-	CONSTRAINT email_es_valido CHECK (email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
-	CONSTRAINT pais_nac_es_valido CHECK (length(pais_nac) = 3 OR pais_nac = "ZZZ"),
-	CONSTRAINT reside_cp CHECK (length(reside_cp) = 3 OR reside_cp ~ '^53[0-9]{3}'),
-	CONSTRAINT reside_muni CHECK (length(reside_muni) = 3 OR reside_muni ~ '^530[0-9]{3}')
 );
 
 -- Teléfonos fijos y móviles de empleados. Formato con E.164 estricto (Ej. +34612345678)
@@ -109,8 +92,8 @@ CREATE TABLE IF NOT EXISTS pacientes (
 	reside_cp TEXT NOT NULL,
 	reside_muni TEXT NOT NULL,
 	cip_sns TEXT UNIQUE NOT NULL,
-    -- cip_aut TEXT UNIQUE NOT NULL,
-    nass TEXT UNIQUE NOT NULL,
+    cip_aut TEXT UNIQUE NOT NULL,	-- Varía segun la comunidad
+    nass TEXT UNIQUE NOT NULL,	-- Puede ser null?
     n_hc TEXT UNIQUE NOT NULL,
     med_cabecera BIGINT NOT NULL,
 
@@ -118,9 +101,9 @@ CREATE TABLE IF NOT EXISTS pacientes (
 
 	CONSTRAINT tipo_id_es_valido CHECK (tipo_id IN ('DNI','NIE')),
 	CONSTRAINT num_id_es_valido CHECK (
-		(tipo_id = 'DNI' AND num_id ~ '^[0-9]{8}[A-Z]$') -- No valida si dígito de control es correcto
+		(tipo_id = 'DNI' AND num_id ~ '^[0-9]{8}[A-Z]$')
 		OR
-		(tipo_id = 'NIE' AND num_id ~ '^[XYZ][0-9]{7}[A-Z]$') -- Aqui tampoco.
+		(tipo_id = 'NIE' AND num_id ~ '^[XYZ][0-9]{7}[A-Z]$')
 	),
 	CONSTRAINT nombre_apellidos_sin_digitos CHECK(
 		(nombre !~ '[0-9]') AND 
@@ -152,7 +135,7 @@ CREATE TABLE IF NOT EXISTS tlfno_pacientes(
 
 /*
 Citas
-	El profesional puede aproximar la hora de fin de la cita y permitiria comprobar que no se solape con otra.
+	Validar que no haya citas solapadas entre si entre el mismo profesional responsable y la persona.
 */
 CREATE TABLE IF NOT EXISTS citas(
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -190,7 +173,8 @@ CREATE TABLE IF NOT EXISTS turnos(
 
 /* 
 Episodios (ordinario y urgencias)
-Revisar hora de atención y de alta no superiores a la actual
+Revisar hora de atención y de alta no superiores a la actual.
+Revisar BOE para añadir más cosas
 */
 CREATE TABLE IF NOT EXISTS episodio(
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -212,6 +196,8 @@ CREATE TABLE IF NOT EXISTS episodio(
 	CONSTRAINT nivel_triaje_valido CHECK (nivel_triaje IS NULL OR nivel_triaje IN ('Azul', 'Verde', 'Amarillo', 'Naranja', 'Rojo'))
 	CONSTRAINT resultado_valido CHECK (resultado IN ('Alta', 'Derivación', 'Pruebas')),
 );
+
+-------------------------------------- FIN
 
 -- HCE TESAUROS
 
@@ -303,23 +289,47 @@ FK hacia tablas tesauro comentadas por ahora porque no se estan usando (ver inic
 Cambiar los campos id_antecedente, id_dispositivo, etc.
 Se deberia comprobar que la edad de inicio y de fin no sean inferiores a la edad de nacimiento del paciente, pero
 con CHECK no se puede. Usar un trigger o python.
+
+NOTA:
+Falta enfermería, situación funcional y alertas.
+Falta añadir los OID de las terminologías de codificación
+
+Alertas: 
+valor codificado de la alerta en CIE, SNOMED CT, CIAP.
+
+Enfermería:  
+Diagnósticos activos y no activos (aunque el informe solo pide activos). 
+OBLIGATORIO: tratamiento, recomendaciones
+Opcional: diagnóstico, fecha, intervencion, fecha, resultados, fecha, recomendaciones de cuidados enfermeros
+Puede hacer intervenciones no vinculadasa diagnóstico
+
+Situación funcional
+Escala (SNOMED CT), resultado, interpretación --> situación funcional (SNOMED CT)
 */
 
+/*
+REGISTRO DE ANTECEDENTES
+Enfermedades previas, neonatales, obstétricos, quirúrgicos, social, profesional comparten el mismo esquema y se agrupan en esta tabla.
+Antecedentes familiares y dispositivos van aparte por diferencias.s
+
+*/
 CREATE TABLE IF NOT EXISTS registro_antecedente(
+
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
-	-- id_antecedente BIGINT NOT NULL,
-	id_snomed_antecedente TEXT NOT NULL ,
+	tipo_antecedente TEXT NOT NULL,
+	id_snomed_antecedente TEXT NOT NULL,
 	concepto_snomed_antecedente TEXT NOT NULL,
+	id_CIE TEXT,
+	term_CIE TEXT,
+
 	fecha_inicio DATE,
-	fecha_fin DATE,
 	edad_inicio SMALLINT,
-	edad_fin SMALLINT,
-	observaciones TEXT,
+	fecha_fin DATE,			-- Para entecedentes sociales o profesionales. También para saber si la enfermedad sigue activa en el caso de antecedentes de enfermedad.
 
 	FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
-	-- FOREIGN KEY (id_antecedente) REFERENCES antecendentes (id),
 
+	/*
 	CONSTRAINT id_snomed_valido CHECK (id_snomed_antecedente ~ '^[1-9][0-9]{5,17}$'),
 	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(id_snomed_antecedente, 3) ~ '^(00|10)[0-9]$')
 
@@ -331,34 +341,83 @@ CREATE TABLE IF NOT EXISTS registro_antecedente(
 		(fecha_fin <= CURRENT_DATE AND fecha_inicio <= CURRENT_DATE)
 	)
 	CONSTRAINT edad_inicio_fin_validas CHECK(edad_fin >= edad_inicio)
+	*/
 );
 
+CREATE TABLE IF NOT EXISTS registro_dispositivo(
+	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_paciente BIGINT NOT NULL,
+	id_snomed_dispositivo TEXT NOT NULL,
+	concepto_snomed_dispositivo TEXT NOT NULL,
+	cod_emdn_dispositivo TEXT NOT NULL, TEXT NOT NULL
+	term_emdn_dispositivo TEXT NOT NULL,
+
+	fecha_implantacion DATE,
+	fecha_retirada DATE,
+	id_dispositivo_fábrica TEXT,
+
+	/*
+	FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
+	-- FOREIGN KEY (id_dispositivo) REFERENCES dispositivo (id)
+
+	CONSTRAINT id_snomed_valido CHECK (id_snomed_dispositivo ~ '^[1-9][0-9]{5,17}$'),
+	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(id_snomed_dispositivo, 3) ~ '^(00|10)[0-9]$')
+
+	CONSTRAINT fecha_implantación_retirada_validas CHECK(
+		(fecha_retirada IS NULL AND fecha_implantacion <= CURRENT_DATE)
+		OR
+		(fecha_retirada <= CURRENT_DATE AND fecha_implantacion <= CURRENT_DATE)
+	)
+
+	-- Tiene que ser menor igual a 20, o exactamente 20 caracteres??
+	CONSTRAINT id_fábrica_valido CHECK (length(id_dispositivo_fábrica) = 20) */
+);
+
+CREATE TABLE IF NOT EXISTS registro_antecedentes_familiares(
+	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_paciente BIGINT NOT NULL,
+	id_snomed_dispositivo TEXT NOT NULL,
+	concepto_snomed_dispositivo TEXT NOT NULL,
+
+)
+
+/* 
+Registro de alergias. 
+Tablas eHDSI para alergias: https://art-decor.ehdsi.eu/publication/epsos-html-20201215T191920/terminology.html
+*/
 CREATE TABLE IF NOT EXISTS registro_alergias(
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
-	-- id_alergeno BIGINT NOT NULL,
 	id_snomed_alérgeno TEXT NOT NULL ,
 	concepto_snomed_alérgeno TEXT NOT NULL,
-	tipo_reacc_ehdsi TEXT,
-	id_snomed_man_clin TEXT
+	cod_tipo_reacc_ehdsi TEXT NOT NULL,
+	term_tipo_reacc_ehdsi TEXT NOT NULL,
+
+	-- Recomendados
+	id_snomed_man_clin TEXT,
 	man_clin_snomed TEXT,
 	id_cie_man_clin TEXT
 	man_clin_CIE TEXT,
 
-	-- Estos van por categorías. Comprobar cuáles son y meter CHECK
-	gravedad_ehdsi VARCHAR(30),
-	criticidad VARCHAR(30),
-	certeza VARCHAR(12),
-	estado VARCHAR(8),
+	cod_gravedad_ehdsi TEXT
+	term_gravedad_ehdsi TEXT,
+
+	cod_criticidad_ehdsi TEXT,
+	term_criticidad_ehdsi TEXT,
+
+	cod_certeza_ehdsi TEXT,
+	term_certeza_ehdsi TEXT,
+
+	cod_estado_ehdsi TEXT,
+	term_estado_ehdsi TEXT,
 
 	fecha_inicio DATE,
 	fecha_fin DATE,
-	observaciones TEXT,
 
 	FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
 	FOREIGN KEY (id_alergeno) REFERENCES alergeno (id),
 
-	CONSTRAINT ids_snomed_valido CHECK (
+	/* CONSTRAINT ids_snomed_valido CHECK (
 		(id_snomed_alérgeno ~ '^[1-9][0-9]{5,17}$')
 		AND
 		((id_snomed_man_clin IS NULL) OR (id_snomed_man_clin ~ '^[1-9][0-9]{5,17}$'))
@@ -378,51 +437,51 @@ CREATE TABLE IF NOT EXISTS registro_alergias(
 		(fecha_fin IS NULL AND fecha_inicio <= CURRENT_DATE)
 		OR
 		(fecha_fin <= CURRENT_DATE AND fecha_inicio <= CURRENT_DATE)
-	)
+	)*/
 );
 
-CREATE TABLE IF NOT EXISTS registro_dispositivo(
+CREATE TABLE IF NOT EXISTS registro_vacunación(
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
-	-- id_dispositivo BIGINT NOT NULL,
-	id_snomed_dispositivo TEXT NOT NULL,
-	concepto_snomed_dispositivo TEXT NOT NULL,
-	fecha_implantacion DATE NOT NULL,
-	fecha_retirada DATE,
-	id_dispositivo_fábrica TEXT NOT NULL,
-	observaciones TEXT,
+
+	id_snomed_vacuna TEXT NOT NULL,
+	concepto_snomed_vacuna TEXT NOT NULL,
+
+	cod_nom_comercial TEXT
+	nom_comercial TEXT
+	fecha_admin DATE NOT NULL,
+	num_lote TEXT,
 
 	FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
-	-- FOREIGN KEY (id_dispositivo) REFERENCES dispositivo (id)
+	-- FOREIGN KEY (id_vacuna) REFERENCES farmaco (id)
 
-	CONSTRAINT id_snomed_valido CHECK (id_snomed_dispositivo ~ '^[1-9][0-9]{5,17}$'),
-	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(id_snomed_dispositivo, 3) ~ '^(00|10)[0-9]$')
+	/*CONSTRAINT id_snomed_valido CHECK (id_snomed_vacuna ~ '^[1-9][0-9]{5,17}$'),
+	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(id_snomed_vacuna, 3) ~ '^(00|10)[0-9]$'),
 
-	CONSTRAINT fecha_implantación_retirada_validas CHECK(
-		(fecha_retirada IS NULL AND fecha_implantacion <= CURRENT_DATE)
+	CONSTRAINT fecha_admin_validez_validas CHECK(
+		(fecha_validez IS NULL AND fecha_admin <= CURRENT_DATE)
 		OR
-		(fecha_retirada <= CURRENT_DATE AND fecha_implantacion <= CURRENT_DATE)
-	)
+		(fecha_admin <= CURRENT_DATE AND fecha_validez > fecha_admin)
+	),
 
-	-- Tiene que ser menor igual a 20, o exactamente 20 caracteres??
-	CONSTRAINT id_fábrica_valido CHECK (length(id_dispositivo_fábrica) = 20)
+	CONSTRAINT num_repeticion_positivo CHECK (num_repeticion > 0),
+	CHECK num_lote_valido CHECK (length(num_lote) =< 30)*/
 
 );
 
 CREATE TABLE IF NOT EXISTS registro_habitos(
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
-	-- id_habito BIGINT NOT NULL,
+
 	id_snomed_habito TEXT NOT NULL,
 	concepto_snomed_habito TEXT NOT NULL,
+
 	anno_inicio SMALLINT,
 	anno_fin SMALLINT,
 	edad_inicio SMALLINT,
 	edad_fin SMALLINT,
-	observaciones TEXT,
 
 	FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
-	-- FOREIGN KEY (id_habito) REFERENCES perjudicial (id)
 
 	CONSTRAINT id_snomed_valido CHECK (id_snomed_habito ~ '^[1-9][0-9]{5,17}$'),
 	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(id_snomed_habito, 3) ~ '^(00|10)[0-9]$'),
@@ -450,21 +509,21 @@ CREATE TABLE IF NOT EXISTS registro_habitos(
 CREATE TABLE IF NOT EXISTS registro_toxico(
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
-	-- id_toxico BIGINT NOT NULL,
+
 	id_snomed TEXT NOT NULL,
 	concepto_snomed TEXT NOT NULL,
+
 	dosis DECIMAL,
-	ud_dosis VARCHAR(15),
-	id_snomed_patron TEXT,
-	concepto_patron_snomed TEXT,
+	ud_dosis TEXT,
 	anno_inicio SMALLINT,
 	anno_fin SMALLINT,
 	edad_inicio SMALLINT,
 	edad_fin SMALLINT,
-	observaciones TEXT,
+
+	id_snomed_patron TEXT,
+	concepto_patron_snomed TEXT,
 
 	FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
-	-- FOREIGN KEY (id_toxico) REFERENCES perjudicial (id)
 
 	CONSTRAINT ids_snomed_validos CHECK (
 		(id_snomed ~ '^[1-9][0-9]{5,17}$')
@@ -486,7 +545,7 @@ CREATE TABLE IF NOT EXISTS registro_toxico(
 		(anno_inicio >= 0 AND anno_fin >= 0 AND anno_inicio <= anno_fin)
 	),
 
-	-- Habría que comprobar que la edad coincide con las posibilidades según la sfecha de inicio y fin 
+	-- Habría que comprobar que la edad coincide con las posibilidades según la fecha de inicio y fin 
 	--(un año +- dependiendo de la fecha de nacimiento del paciente)
 	CONSTRAINT edad_inicio_fin_validas CHECK(
 		(edad_inicio IS NULL AND edad_fin IS NULL) 
@@ -497,49 +556,42 @@ CREATE TABLE IF NOT EXISTS registro_toxico(
 	)
 );
 
-CREATE TABLE IF NOT EXISTS registro_vacunación(
-	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	id_paciente BIGINT NOT NULL,
-	-- id_vacuna BIGINT NOT NULL,
-	id_snomed_vacuna TEXT NOT NULL,
-	concepto_snomed_vacuna TEXT NOT NULL,
-	fecha_admin DATE NOT NULL,
-	fecha_validez DATE,
-	num_repeticion SMALLINT NOT NULL,		-- Hay que comprobar que sea > 0 ???
-	num_lote VARCHAR(30) NOT NULL,			-- Cambiar por TEXT y poner check para el formato
-
-	FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
-	-- FOREIGN KEY (id_vacuna) REFERENCES farmaco (id)
-
-	CONSTRAINT id_snomed_valido CHECK (id_snomed_vacuna ~ '^[1-9][0-9]{5,17}$'),
-	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(id_snomed_vacuna, 3) ~ '^(00|10)[0-9]$'),
-
-	CONSTRAINT fecha_admin_validez_validas CHECK(
-		(fecha_validez IS NULL AND fecha_admin <= CURRENT_DATE)
-		OR
-		(fecha_admin <= CURRENT_DATE AND fecha_validez > fecha_admin)
-	)
-
-);
-
+/*
+En el caso de las fórmulas magistrales, la fecha de inicio no es obligatoria.
+*/
 CREATE TABLE IF NOT EXISTS registro_tratamiento(
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
-	-- id_tratamiento BIGINT NOT NULL,
-	id_snomed TEXT NOT NULL,
-	concepto_snomed TEXT NOT NULL,
+	tipo_tratamiento TEXT NOT NULL,
+	cod_fármaco TEXT NOT NULL,
+	nombre_fármaco TEXT NOT NULL,
+	cod_nombre_comercial TEXT,
+	nombre_comercial TEXT,
+
 	fecha_inicio DATE NOT NULL,
-	fecha_fin DATE NOT NULL,				-- Esto puede ser la fecha en la que tiene que renovar y se crea otro registro, o puede ponerse en null??
-	via_admin_aemps VARCHAR(26) NOT NULL,
-	dosis DECIMAL NOT NULL,
-	frecuencia SMALLINT NOT NULL,
-	ud_dosis VARCHAR(15) NOT NULL,
-	ud_frecuencia VARCHAR(15) NOT NULL,
+	fecha_fin DATE,
+	
+	cod_via_admin_aemps, TEXT,
+	via_admin_aemps TEXT,
+
+	-- Estos no deben ser NULL si el tratamiento es un medicamente, pero pueden serlo en caso de una fórmula magistral
+	cod_dosis TEXT,
+	dosis TEXT ,
+	Posología TEXT,
 
 	FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
-	-- FOREIGN KEY (id_tratamiento) REFERENCES farmaco (id)
 
 	CONSTRAINT id_snomed_valido CHECK (id_snomed ~ '^[1-9][0-9]{5,17}$'),
 	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(snomed_id, 3) ~ '^(00|10)[0-9]$')
 
+	CONSTRAINT fecha_inicio_fin_validas CHECK(fecha_fin > fecha_inicio),
+
+
 );
+
+/* 
+Añadir las tablas que sean necesarias para esto
+registro_prueba_laboratorio	
+registro_resultado_laboratorio
+registro_cuidados_enfermeria
+*/
