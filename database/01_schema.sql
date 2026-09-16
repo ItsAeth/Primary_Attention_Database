@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS pacientes (
 );
 
 -- Teléfonos fijos y móviles de pacientes. Formato con E.164 estricto (Ej. +34612345678)
-CREATE TABLE IF NOT EXISTS tlfno_pacientes(
+CREATE TABLE IF NOT EXISTS tlfno_pacientes (
 	id_tlf BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
 	tipo_tlf TEXT NOT NULL,
@@ -121,9 +121,9 @@ Citas
 	Las horas de inicio y fin son previstas. 
 	La hora de fin puede servir para comprobar que no hay citas solapadas para el mismo profesional.
 	
-	TODO: lugar puede ser un id de consulta en un centro o ser null. Tal renombrar  a consulta.
+	TODO: lugar puede ser un id de consulta en un centro o ser null. Tal renombrar a consulta.
 */
-CREATE TABLE IF NOT EXISTS citas(
+CREATE TABLE IF NOT EXISTS citas (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
 	id_sanitario BIGINT NOT NULL,
@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS citas(
 /* 
 Episodios (ordinario y urgencias)
 */
-CREATE TABLE IF NOT EXISTS episodio(
+CREATE TABLE IF NOT EXISTS episodio (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	tipo_episodio TEXT NOT NULL,
 	procedencia TEXT NOT NULL,
@@ -163,297 +163,161 @@ CREATE TABLE IF NOT EXISTS episodio(
 -- //// TERMINADO HASTA AQUÍ. REVISAR EL RESTO
 
 /*
-HCE REGISTROS
-FK hacia tablas tesauro comentadas por ahora porque no se estan usando (ver inicio de la sección de tablas tesauro)
-
-Cambiar los campos id_antecedente, id_dispositivo, etc.
-Se deberia comprobar que la edad de inicio y de fin no sean inferiores a la edad de nacimiento del paciente, pero
-con CHECK no se puede. Usar un trigger o python.
-
-*/
-
-/*
 REGISTRO DE ANTECEDENTES
-Enfermedades previas, neonatales, obstétricos, quirúrgicos, social, profesional comparten el mismo esquema y se agrupan en esta tabla.
-Antecedentes familiares y dispositivos van aparte por diferencias.s
-
+	- Enfermedades previas, neonatales, obstétricos, quirúrgicos, social, profesional comparten el mismo esquema y se agrupan en esta tabla.
+	- Antecedentes familiares y dispositivos van aparte por diferencias.
+	- Fecha de fin para entecedentes sociales o profesionales. 
+	- También para saber si la enfermedad sigue activa en el caso de antecedentes de enfermedad.
+	- No se incluye edad de inicio porque podria calcularse con la tabla de pacientes.
 */
-CREATE TABLE IF NOT EXISTS registro_antecedente(
-
+CREATE TABLE IF NOT EXISTS registro_antecedente (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
-	tipo_antecedente TEXT NOT NULL,
+	tipo_antecedente TEXT NOT NULL, -- Codificado por categorías, poner constraint
 	id_snomed_antecedente TEXT NOT NULL,
 	concepto_snomed_antecedente TEXT NOT NULL,
 	id_CIE TEXT,
 	term_CIE TEXT,
-
 	fecha_inicio DATE,
-	edad_inicio SMALLINT,
-	fecha_fin DATE,			-- Para entecedentes sociales o profesionales. También para saber si la enfermedad sigue activa en el caso de antecedentes de enfermedad.
+	fecha_fin DATE,
 
-	FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
-
-	/*
-	CONSTRAINT id_snomed_valido CHECK (id_snomed_antecedente ~ '^[1-9][0-9]{5,17}$'),
-	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(id_snomed_antecedente, 3) ~ '^(00|10)[0-9]$')
-
-	CONSTRAINT fecha_inicio_fin_validas CHECK(
-		(fecha_inicio IS NULL AND fecha_fin IS NULL) 
-		OR
-		(fecha_fin IS NULL AND fecha_inicio <= CURRENT_DATE)
-		OR
-		(fecha_fin <= CURRENT_DATE AND fecha_inicio <= CURRENT_DATE)
-	)
-	CONSTRAINT edad_inicio_fin_validas CHECK(edad_fin >= edad_inicio)
-	*/
+	FOREIGN KEY (id_paciente) REFERENCES pacientes (id)
 );
 
-CREATE TABLE IF NOT EXISTS registro_dispositivo(
+-- TODO: la tabla de antecedentes familiares no está acabada
+/*CREATE TABLE IF NOT EXISTS registro_antecedentes_familiares(
+	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_paciente BIGINT NOT NULL,
+	id_snomed_antecedente TEXT NOT NULL,
+	grado_parentesco
+)*/
+
+/*
+Registro de dispositivos:
+	- Separados del resto de antecedentes al necesitar almecenar códigos de EMDN e ID de fábrica.
+*/
+CREATE TABLE IF NOT EXISTS registro_dispositivo (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
 	id_snomed_dispositivo TEXT NOT NULL,
-	concepto_snomed_dispositivo TEXT NOT NULL,
-	cod_emdn_dispositivo TEXT NOT NULL, TEXT NOT NULL
-	term_emdn_dispositivo TEXT NOT NULL,
-
+	cod_emdn_dispositivo TEXT NOT NULL,
 	fecha_implantacion DATE,
 	fecha_retirada DATE,
-	id_dispositivo_fábrica TEXT,
+	id_dispositivo_fábrica TEXT
 
-	/*
-	FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
-	-- FOREIGN KEY (id_dispositivo) REFERENCES dispositivo (id)
-
-	CONSTRAINT id_snomed_valido CHECK (id_snomed_dispositivo ~ '^[1-9][0-9]{5,17}$'),
-	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(id_snomed_dispositivo, 3) ~ '^(00|10)[0-9]$')
-
-	CONSTRAINT fecha_implantación_retirada_validas CHECK(
-		(fecha_retirada IS NULL AND fecha_implantacion <= CURRENT_DATE)
-		OR
-		(fecha_retirada <= CURRENT_DATE AND fecha_implantacion <= CURRENT_DATE)
-	)
-
-	-- Tiene que ser menor igual a 20, o exactamente 20 caracteres??
-	CONSTRAINT id_fábrica_valido CHECK (length(id_dispositivo_fábrica) = 20) */
+	FOREIGN KEY (id_paciente) REFERENCES pacientes (id)
 );
-
-CREATE TABLE IF NOT EXISTS registro_antecedentes_familiares(
-	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	id_paciente BIGINT NOT NULL,
-	id_snomed_dispositivo TEXT NOT NULL,
-	concepto_snomed_dispositivo TEXT NOT NULL,
-
-)
 
 /* 
 Registro de alergias. 
-Tablas eHDSI para alergias: https://art-decor.ehdsi.eu/publication/epsos-html-20201215T191920/terminology.html
+	- Tablas eHDSI para alergias recopilan los valores válidos: https://art-decor.ehdsi.eu/publication/epsos-html-20201215T191920/terminology.html
 */
-CREATE TABLE IF NOT EXISTS registro_alergias(
+CREATE TABLE IF NOT EXISTS registro_alergias (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
+
 	id_snomed_alérgeno TEXT NOT NULL ,
-	concepto_snomed_alérgeno TEXT NOT NULL,
 	cod_tipo_reacc_ehdsi TEXT NOT NULL,
-	term_tipo_reacc_ehdsi TEXT NOT NULL,
-
-	-- Recomendados
 	id_snomed_man_clin TEXT,
-	man_clin_snomed TEXT,
 	id_cie_man_clin TEXT
-	man_clin_CIE TEXT,
-
-	cod_gravedad_ehdsi TEXT
-	term_gravedad_ehdsi TEXT,
-
+	cod_gravedad_ehdsi TEXT,
 	cod_criticidad_ehdsi TEXT,
-	term_criticidad_ehdsi TEXT,
-
 	cod_certeza_ehdsi TEXT,
-	term_certeza_ehdsi TEXT,
-
 	cod_estado_ehdsi TEXT,
-	term_estado_ehdsi TEXT,
 
 	fecha_inicio DATE,
 	fecha_fin DATE,
 
-	FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
-	FOREIGN KEY (id_alergeno) REFERENCES alergeno (id),
-
-	/* CONSTRAINT ids_snomed_valido CHECK (
-		(id_snomed_alérgeno ~ '^[1-9][0-9]{5,17}$')
-		AND
-		((id_snomed_man_clin IS NULL) OR (id_snomed_man_clin ~ '^[1-9][0-9]{5,17}$'))
-	),
-	CONSTRAINT ids_snomed_identifica_concepto CHECK (
-		(RIGHT(id_snomed_alérgeno, 3) ~ '^(00|10)[0-9]$') 
-		AND
-		((id_snomed_man_clin IS NULL) OR (RIGHT(id_cie_man_clin, 3) ~ '^(00|10)[0-9]$'))
-	),
-	CONSTRAINT id_cie_valido CHECK (length(id_cie_man_clin) BETWEEN 3 AND 7)
-
-	-- CHECK para comprobar EDHSI aquí --
-
-	CONSTRAINT fecha_inicio_fin_validas CHECK(
-		(fecha_inicio IS NULL AND fecha_fin IS NULL) 
-		OR
-		(fecha_fin IS NULL AND fecha_inicio <= CURRENT_DATE)
-		OR
-		(fecha_fin <= CURRENT_DATE AND fecha_inicio <= CURRENT_DATE)
-	)*/
+	FOREIGN KEY (id_paciente) REFERENCES pacientes (id)
 );
 
-CREATE TABLE IF NOT EXISTS registro_vacunación(
+/* 
+Registro de vacunaciones.
+Solo se registran vacunas administradas, no planificadas ni pendientes en la cartilla de vacunación.
+*/
+CREATE TABLE IF NOT EXISTS registro_vacunaciones (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
-
 	id_snomed_vacuna TEXT NOT NULL,
-	concepto_snomed_vacuna TEXT NOT NULL,
-
 	cod_nom_comercial TEXT
-	nom_comercial TEXT
 	fecha_admin DATE NOT NULL,
 	num_lote TEXT,
 
-	FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
-	-- FOREIGN KEY (id_vacuna) REFERENCES farmaco (id)
-
-	/*CONSTRAINT id_snomed_valido CHECK (id_snomed_vacuna ~ '^[1-9][0-9]{5,17}$'),
-	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(id_snomed_vacuna, 3) ~ '^(00|10)[0-9]$'),
-
-	CONSTRAINT fecha_admin_validez_validas CHECK(
-		(fecha_validez IS NULL AND fecha_admin <= CURRENT_DATE)
-		OR
-		(fecha_admin <= CURRENT_DATE AND fecha_validez > fecha_admin)
-	),
-
-	CONSTRAINT num_repeticion_positivo CHECK (num_repeticion > 0),
-	CHECK num_lote_valido CHECK (length(num_lote) =< 30)*/
-
+	FOREIGN KEY (id_paciente) REFERENCES pacientes (id)
 );
 
-CREATE TABLE IF NOT EXISTS registro_habitos(
+/* 
+Registro de hábitos perjudiciales.
+	- Se registra año de inicio y fin solamente porque los informes no solicitan la fecha completa.
+*/
+CREATE TABLE IF NOT EXISTS registro_habitos (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
-
 	id_snomed_habito TEXT NOT NULL,
-	concepto_snomed_habito TEXT NOT NULL,
-
 	anno_inicio SMALLINT,
 	anno_fin SMALLINT,
-	edad_inicio SMALLINT,
-	edad_fin SMALLINT,
 
 	FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
-
-	CONSTRAINT id_snomed_valido CHECK (id_snomed_habito ~ '^[1-9][0-9]{5,17}$'),
-	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(id_snomed_habito, 3) ~ '^(00|10)[0-9]$'),
-
-	-- Sería más lógico comprobar que no son inferiores al año de nacimiento del paciente.
-	CONSTRAINT anno_inicio_fin_válidos CHECK(
-		(anno_inicio IS NULL AND anno_fin IS NULL) 
-		OR
-		(anno_fin IS NULL AND anno_inicio >= 0)
-		OR
-		(anno_inicio >= 0 AND anno_fin >= 0 AND anno_inicio <= anno_fin)
-	),
-
-	-- Habría que comprobar que la edad coincide con las posibilidades según la sfecha de inicio y fin 
-	--(un año +- dependiendo de la fecha de nacimiento del paciente)
-	CONSTRAINT edad_inicio_fin_validas CHECK(
-		(edad_inicio IS NULL AND edad_fin IS NULL) 
-		OR
-		(edad_fin IS NULL AND edad_inicio >= 0)
-		OR
-		(edad_fin >= 0 AND edad_inicio >= 0 AND edad_inicio <= edad_fin)
-	)
 );
 
-CREATE TABLE IF NOT EXISTS registro_toxico(
+/* 
+Registro de consumo de sustancias tóxicas.
+	- Se registra año de inicio y fin solamente porque los informes no solicitan la fecha completa.
+	- Separado de hábitos tóxicos porque solicita más detalles a parte de la fecha de inicio y fin.
+*/
+CREATE TABLE IF NOT EXISTS registro_toxicos (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
 
-	id_snomed TEXT NOT NULL,
-	concepto_snomed TEXT NOT NULL,
-
+	id_snomed_toxico TEXT NOT NULL,
+	id_snomed_patron_consumo TEXT
 	dosis DECIMAL,
 	ud_dosis TEXT,
 	anno_inicio SMALLINT,
 	anno_fin SMALLINT,
-	edad_inicio SMALLINT,
-	edad_fin SMALLINT,
 
-	id_snomed_patron TEXT,
-	concepto_patron_snomed TEXT,
-
-	FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
-
-	CONSTRAINT ids_snomed_validos CHECK (
-		(id_snomed ~ '^[1-9][0-9]{5,17}$')
-		AND
-		(id_snomed_patron IS NULL OR (id_snomed_patron ~ '^[1-9][0-9]{5,17}$'))
-	),
-	CONSTRAINT ids_snomed_identifican_conceptos CHECK (
-		(RIGHT(snomed_id, 3) ~ '^(00|10)[0-9]$')
-		AND
-		((id_snomed_patron) IS NULL OR (RIGHT(id_snomed_patron, 3) ~ '^(00|10)[0-9]$'))
-	),
-
-	-- Sería más lógico comprobar que no son inferiores al año de nacimiento del paciente.
-	CONSTRAINT anno_inicio_fin_válidos CHECK(
-		(anno_inicio IS NULL AND anno_fin IS NULL) 
-		OR
-		(anno_fin IS NULL AND anno_inicio >= 0)
-		OR
-		(anno_inicio >= 0 AND anno_fin >= 0 AND anno_inicio <= anno_fin)
-	),
-
-	-- Habría que comprobar que la edad coincide con las posibilidades según la fecha de inicio y fin 
-	--(un año +- dependiendo de la fecha de nacimiento del paciente)
-	CONSTRAINT edad_inicio_fin_validas CHECK(
-		(edad_inicio IS NULL AND edad_fin IS NULL) 
-		OR
-		(edad_fin IS NULL AND edad_inicio >= 0)
-		OR
-		(edad_fin >= 0 AND edad_inicio >= 0 AND edad_inicio <= edad_fin)
-	)
+	FOREIGN KEY (id_paciente) REFERENCES pacientes (id)
 );
 
 /*
-En el caso de las fórmulas magistrales, la fecha de inicio no es obligatoria.
+Registro de medicamentos
+	- El codigo de fármaco se refiere al principio activo. El nombre comercial es el combre comercial. 
+	- Ambos segun nomenclator. Dosis con EDQM.
 */
-CREATE TABLE IF NOT EXISTS registro_tratamiento(
+CREATE TABLE IF NOT EXISTS registro_medicamentos (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
-	tipo_tratamiento TEXT NOT NULL,
 	cod_fármaco TEXT NOT NULL,
-	nombre_fármaco TEXT NOT NULL,
 	cod_nombre_comercial TEXT,
-	nombre_comercial TEXT,
 
 	fecha_inicio DATE NOT NULL,
 	fecha_fin DATE,
-	
 	cod_via_admin_aemps, TEXT,
-	via_admin_aemps TEXT,
+	cod_dosis_edqm TEXT NOT NULL,
+	Posología TEXT NOT NULL,
 
-	-- Estos no deben ser NULL si el tratamiento es un medicamente, pero pueden serlo en caso de una fórmula magistral
-	cod_dosis TEXT,
-	dosis TEXT ,
-	Posología TEXT,
+	FOREIGN KEY (id_paciente) REFERENCES pacientes (id)
+);
 
-	FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
+CREATE TABLE registro_formulas_magistrales (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id_paciente BIGINT NOT NULL,
 
-	CONSTRAINT id_snomed_valido CHECK (id_snomed ~ '^[1-9][0-9]{5,17}$'),
-	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(snomed_id, 3) ~ '^(00|10)[0-9]$')
-	CONSTRAINT fecha_inicio_fin_validas CHECK(fecha_fin > fecha_inicio),
+    id_formula TEXT NOT NULL,
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE,
+    id_via_administracion TEXT,
+    dosis TEXT NOT NULL,
+    frecuencia TEXT NOT NULL,
+
+    FOREIGN KEY (id_paciente) REFERENCES pacientes(id)
 );
 
 /* ================== TO-DO ===================
 
-Falta prubas, alertas, enfermería y situación funcional.
+1) Citas: El lugar puede ser un id de consulta en un centro o ser null. Tal renombrar a consulta.
+2) La tabla de antecedentes familiares no está acabada
+3) Más tablas: Falta prubas, alertas, enfermería y situación funcional.
 
 registro_prueba_laboratorio	
 registro_resultado_laboratorio
@@ -470,7 +334,6 @@ Puede hacer intervenciones no vinculadasa diagnóstico
 
 Situación funcional
 Escala (SNOMED CT), resultado, interpretación --> situación funcional (SNOMED CT)
-
 */
 
 -- =======================================================================================================================

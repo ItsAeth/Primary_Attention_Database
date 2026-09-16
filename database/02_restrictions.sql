@@ -83,3 +83,71 @@ ADD	CONSTRAINT tipo_episodio_valido CHECK (tipo IN ('Seguimiento', 'Consulta', '
 ADD	CONSTRAINT fecha_fin_mayor_inicio CHECK (fin > inicio),
 ADD	CONSTRAINT nivel_triaje_valido CHECK (nivel_triaje IS NULL OR nivel_triaje IN ('Azul', 'Verde', 'Amarillo', 'Naranja', 'Rojo')),
 ADD	CONSTRAINT resultado_valido CHECK (resultado IN ('Alta', 'Derivación', 'Pruebas'));
+
+/* REGISTROS DE HCE
+
+En caso de validar ID de SNOMED CT o CIE con CHECK, aunque la API o Python deberia poder hacerlo:
+ADD	CONSTRAINT id_snomed_valido CHECK (id_snomed_antecedente ~ '^[1-9][0-9]{5,17}$'),
+ADD	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(id_snomed_antecedente, 3) ~ '^(00|10)[0-9]$')
+ADD	CONSTRAINT id_cie_valido CHECK (length(id_cie_man_clin) BETWEEN 3 AND 7)
+*/
+
+-- Registros de antecedente: fechas de inicio y fin
+ALTER TABLE IF EXISTS registro_antecedentes
+ADD	CONSTRAINT fecha_inicio_fin_validas CHECK (fecha_fin > fecha_inicio OR fecha_fin IS NULL OR fecha_inicio IS NULL);
+
+/*
+Registros de dispositivo: 
+	- Fechas de implantación y retirada.
+	- Formato del id de fabrica. TODO: son máximo 20 caracteres, exactamente igual a 20, o hay algun formato especial??
+*/
+ALTER TABLE IF EXISTS registro_dispositivos
+ADD CONSTRAINT fecha_implantacion_retirada_validas CHECK (
+	(fecha_implantacion IS NULL OR fecha_retirada IS NULL)
+	OR
+	(fecha_retirada > fecha_implantacion)
+),
+ADD CONSTRAINT id_dispositivo_fabrica_valido CHECK (length(id_dispositivo_fabrica) <= 20);
+
+/*
+Registros de vacunaciones:
+	Formato del nº lote. TODO: son máximo 30 caracteres, exactamente igual a 30, o hay algun formato especial??
+*/
+ALTER TABLE IF EXISTS registro_vacunaciones
+ADD	CONSTRAINT fecha_inicio_fin_validas CHECK (fecha_fin > fecha_inicio OR fecha_fin IS NULL OR fecha_inicio IS NULL),
+ADD CONSTRAINT num_lote_valido CHECK (length(num_lote) =< 30);
+
+/*
+Registros de hábitos y registro de consumo de tóxicos. Misma lógica de años
+	- Años de inicio y fin pueden ser NULL. En caso de no serlo, deben ser enteros positivos.
+	- Si uno de los años es NULL, no se comparan. Si los dos se conocen, año de fin posterior a año de inicio
+*/
+ALTER TABLE IF EXISTS registro_habitos
+ADD CONSTRAINT anno_inicio_fin_validos CHECK (
+    (anno_inicio IS NULL OR anno_inicio >= 0)
+    AND
+    (anno_fin IS NULL OR anno_fin >= 0)
+    AND
+    (anno_inicio IS NULL OR anno_fin IS NULL OR anno_fin > anno_inicio)
+);
+
+ALTER TABLE IF EXISTS registro_toxicos
+ADD CONSTRAINT anno_inicio_fin_validos CHECK (
+    (anno_inicio IS NULL OR anno_inicio >= 0)
+    AND
+    (anno_fin IS NULL OR anno_fin >= 0)
+    AND
+    (anno_inicio IS NULL OR anno_fin IS NULL OR anno_fin > anno_inicio)
+);
+
+/*
+Registros de medicamentos y fórmulas magistrales
+	- Años de inicio y fin pueden ser NULL. En caso de no serlo, deben ser enteros positivos.
+	- Si uno de los años es NULL, no se comparan. Si los dos se conocen, año de fin posterior a año de inicio
+*/
+ALTER TABLE IF EXISTS registro_toxicos
+ADD CONSTRAINT fecha_inicio_fin_validas CHECK (fecha_fin IS NULL OR fecha_fin >= fecha_inicio);
+
+ALTER TABLE IF EXISTS registro_formulas_magistrales
+ADD CONSTRAINT fecha_inicio_fin_validas CHECK (fecha_fin IS NULL OR fecha_fin >= fecha_inicio);
+
