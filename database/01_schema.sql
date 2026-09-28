@@ -145,22 +145,24 @@ CREATE TABLE IF NOT EXISTS episodio (
 	tipo_episodio TEXT NOT NULL,
 	procedencia TEXT NOT NULL,
 	tipo_consulta TEXT NOT NULL,
-	id_snomed_motivo_consulta TEXT NOT NULL,
+
+	id_snomed_motivo_consulta TEXT NOT NULL, -- Bastaria con uno (el que haya elegido el médico) y especificar cual es la terminología.
 	id_cie_motivo_consulta TEXT NOT NULL,
+
 	id_paciente BIGINT NOT NULL,
 	id_sanitario BIGINT NOT NULL,
 	inicio TIMESTAMPTZ NOT NULL,
 	fin TIMESTAMPTZ NOT NULL,
 	nivel_triaje TEXT,
-	id_diag_snomed TEXT,
+
+	id_diag_snomed TEXT,	-- Este es snomed obligatoriamente
+
 	observaciones TEXT,
 	resultado TEXT,
 
 	FOREIGN KEY (id_paciente) REFERENCES pacientes(id),
 	FOREIGN KEY (id_sanitario) REFERENCES empleados(id)
 );
-
--- //// TERMINADO HASTA AQUÍ. REVISAR EL RESTO
 
 /*
 REGISTRO DE ANTECEDENTES
@@ -173,11 +175,11 @@ REGISTRO DE ANTECEDENTES
 CREATE TABLE IF NOT EXISTS registro_antecedente (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
-	tipo_antecedente TEXT NOT NULL, -- Codificado por categorías, poner constraint
-	id_snomed_antecedente TEXT NOT NULL,
-	concepto_snomed_antecedente TEXT NOT NULL,
+	tipo_antecedente TEXT NOT NULL,
+
+	id_snomed_antecedente TEXT NOT NULL,	-- Igual, solo 1 y registrar cual es la terminología.
 	id_CIE TEXT,
-	term_CIE TEXT,
+
 	fecha_inicio DATE,
 	fecha_fin DATE,
 
@@ -185,12 +187,18 @@ CREATE TABLE IF NOT EXISTS registro_antecedente (
 );
 
 -- TODO: la tabla de antecedentes familiares no está acabada
-/*CREATE TABLE IF NOT EXISTS registro_antecedentes_familiares(
+CREATE TABLE IF NOT EXISTS registro_antecedentes_familiares(
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
-	id_snomed_antecedente TEXT NOT NULL,
-	grado_parentesco
-)*/
+
+	id_snomed_antecedente TEXT NOT NULL,	-- Igual, solo 1 y registrar cual es la terminología.
+	id_cie_antecedente TEXT NOT NULL,
+
+	id_gr_parentesco_snomed TEXT NOT NULL,
+	edad_inicio SMALLINT,
+
+	FOREIGN KEY (id_paciente) REFERENCES pacientes (id)
+)
 
 /*
 Registro de dispositivos:
@@ -199,8 +207,10 @@ Registro de dispositivos:
 CREATE TABLE IF NOT EXISTS registro_dispositivo (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
-	id_snomed_dispositivo TEXT NOT NULL,
+
+	id_snomed_dispositivo TEXT NOT NULL,	-- Igual, solo 1 y registrar cual es la terminología.
 	cod_emdn_dispositivo TEXT NOT NULL,
+
 	fecha_implantacion DATE,
 	fecha_retirada DATE,
 	id_dispositivo_fábrica TEXT
@@ -216,10 +226,12 @@ CREATE TABLE IF NOT EXISTS registro_alergias (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
 
-	id_snomed_alérgeno TEXT NOT NULL ,
+	id_snomed_alérgeno TEXT NOT NULL,
+
+	id_snomed_man_clin TEXT,	-- Igual, solo 1 y registrar cual es la terminología.
+	id_cie_man_clin TEXT,
+
 	cod_tipo_reacc_ehdsi TEXT NOT NULL,
-	id_snomed_man_clin TEXT,
-	id_cie_man_clin TEXT
 	cod_gravedad_ehdsi TEXT,
 	cod_criticidad_ehdsi TEXT,
 	cod_certeza_ehdsi TEXT,
@@ -239,7 +251,7 @@ CREATE TABLE IF NOT EXISTS registro_vacunaciones (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
 	id_snomed_vacuna TEXT NOT NULL,
-	cod_nom_comercial TEXT
+	cod_nom_comercial TEXT,
 	fecha_admin DATE NOT NULL,
 	num_lote TEXT,
 
@@ -299,6 +311,10 @@ CREATE TABLE IF NOT EXISTS registro_medicamentos (
 	FOREIGN KEY (id_paciente) REFERENCES pacientes (id)
 );
 
+/*
+Registro de formulas magistrales
+	Similar a medicamentos, pero la dosis no usa EDQM y solo se incluye la frecuencia en lugar de la posología completa.
+*/
 CREATE TABLE registro_formulas_magistrales (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     id_paciente BIGINT NOT NULL,
@@ -313,113 +329,14 @@ CREATE TABLE registro_formulas_magistrales (
     FOREIGN KEY (id_paciente) REFERENCES pacientes(id)
 );
 
-/* ================== TO-DO ===================
-
-1) Citas: El lugar puede ser un id de consulta en un centro o ser null. Tal renombrar a consulta.
-2) La tabla de antecedentes familiares no está acabada
-3) Más tablas: Falta prubas, alertas, enfermería y situación funcional.
-
-registro_prueba_laboratorio	
-registro_resultado_laboratorio
-registro_cuidados_enfermeria
-
-Alertas: 
-valor codificado de la alerta en CIE, SNOMED CT, CIAP.
-
-Enfermería:  
-Diagnósticos activos y no activos (aunque el informe solo pide activos). 
-OBLIGATORIO: tratamiento, recomendaciones
-Opcional: diagnóstico, fecha, intervencion, fecha, resultados, fecha, recomendaciones de cuidados enfermeros
-Puede hacer intervenciones no vinculadasa diagnóstico
-
-Situación funcional
-Escala (SNOMED CT), resultado, interpretación --> situación funcional (SNOMED CT)
-*/
-
--- =======================================================================================================================
--- =======================================================================================================================
-
-
--- HCE TESAUROS EN DESUSO
-
-/*
-
-Existiendo una API para acceder a la terminologia, estas tablas no son útiles si solo se pretende buscar los términos.
-Las dejo estar por ahora.
-
-RESTRICCIONES SNOMED CT
-https://docs.snomed.org/snomed-ct-specifications/snomed-ct-release-file-specification/snomed-ct-identifiers/6.3-sctid-constraints
-SCTID empieza por digito que no sea 0. El resto son dígitos hasta sumar de 6 a 18 caracteres.
-Solo se almacenan conceptos de SNOMED CT. Los dos penúltimos dígitos son 00 o 10.
-El check digit de un SCTID se valida mediante el algoritmo de Verhoeff (validar esto con python).
-
-CIE-10-ES
-https://www.sanidad.gob.es/estadEstudios/estadisticas/normalizacion/CIE10/2026/2026_CIE10ES_Tomo_I_Diagnosticos.pdf
-ID CIE puede tener 7 dígitos en la variante española (CIE-10-ES)
-*/
-
-/*
-CREATE TABLE IF NOT EXISTS antecendentes(
+-- Registro de situaciones funcionales de pacientes
+CREATE TABLE registro_situaciones_funcionales (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	tipo TEXT NOT NULL,
-	id_snomed TEXT NOT NULL ,
-	concepto_snomed TEXT NOT NULL,
-	id_cie TEXT,
-	literal_cie TEXT,
-
-	CONSTRAINT tipo_antecedente_valido CHECK (tipo IN ('Enfermedad', 'Neonatal', 'Obstétrico', 'Familiar', 'Quirúrgico', 'Social', 'Profesional')),
-	CONSTRAINT id_snomed_valido CHECK (id_snomed ~ '^[1-9][0-9]{5,17}$'),
-	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(snomed_id, 3) ~ '^(00|10)[0-9]$'),
-	CONSTRAINT id_cie_valido CHECK (length(id_cie) BETWEEN 3 AND 7)
-);
-
-CREATE TABLE IF NOT EXISTS alergeno(
-	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	id_snomed TEXT NOT NULL CHECK (length(id_snomed) >= 6),
-	concepto_snomed TEXT NOT NULL,
-
-	CONSTRAINT id_snomed_valido CHECK (id_snomed ~ '^[1-9][0-9]{5,17}$'),
-	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(snomed_id, 3) ~ '^(00|10)[0-9]$'),
-
-);
-
--- Validar los del EMDN
-CREATE TABLE IF NOT EXISTS dispositivo(
-	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	id_snomed TEXT NOT NULL CHECK (length(id_snomed) >= 6),
-	concepto_snomed TEXT NOT NULL,
-	id_emdn VARCHAR(13),
-	desc_emdn TEXT
-
-	CONSTRAINT id_snomed_valido CHECK (id_snomed ~ '^[1-9][0-9]{5,17}$'),
-	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(snomed_id, 3) ~ '^(00|10)[0-9]$')
-
-);
-
--- Cambiar tipo a palabras completas
-CREATE TABLE IF NOT EXISTS perjudicial(
-	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	tipo CHAR(1) NOT NULL CHECK (tipo IN ('H', 'T')),
-	id_snomed TEXT NOT NULL CHECK (length(id_snomed) >= 6),
-	concepto_snomed TEXT NOT NULL
-
-	CONSTRAINT id_snomed_valido CHECK (id_snomed ~ '^[1-9][0-9]{5,17}$'),
-	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(snomed_id, 3) ~ '^(00|10)[0-9]$'),
-
-);
-
--- Cambiar tipo a palabras completas y cambiar lo de AEMPS
-CREATE TABLE IF NOT EXISTS farmaco(
-	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	tipo CHAR(1) NOT NULL CHECK (tipo IN ('V', 'T')),
-	id_snomed TEXT NOT NULL CHECK (length(id_snomed) >= 6),
-	concepto_snomed TEXT NOT NULL,
-	cod_aemps VARCHAR(7) NOT NULL,
-	nom_comercial TEXT NOT NULL
-
-	CONSTRAINT id_snomed_valido CHECK (id_snomed ~ '^[1-9][0-9]{5,17}$'),
-	CONSTRAINT id_snomed_identifica_concepto CHECK (RIGHT(snomed_id, 3) ~ '^(00|10)[0-9]$')
-);
-
-*/
-
+    id_paciente BIGINT NOT NULL,
+	id_snomed_escala TEXT NOT NULL,
+	resultado TEXT NOT NULL,
+	interpretacion TEXT NOT NULL,
+	id_snomed_situacion_funcional TEXT NOT NULL,
+	
+	FOREIGN KEY (id_paciente) REFERENCES pacientes(id)
+)

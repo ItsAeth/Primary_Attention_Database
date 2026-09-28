@@ -94,6 +94,7 @@ ADD	CONSTRAINT id_cie_valido CHECK (length(id_cie_man_clin) BETWEEN 3 AND 7)
 
 -- Registros de antecedente: fechas de inicio y fin
 ALTER TABLE IF EXISTS registro_antecedentes
+ADD CONSTRAINT cat_antencedente_valida CHECK (tipo_antecedente IN ('Enfermedad previa', 'Neonatal', 'Obstétrico', 'Quirúrgico', 'Social', 'Profesional'))
 ADD	CONSTRAINT fecha_inicio_fin_validas CHECK (fecha_fin > fecha_inicio OR fecha_fin IS NULL OR fecha_inicio IS NULL);
 
 /*

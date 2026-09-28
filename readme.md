@@ -1,5 +1,7 @@
 # Base de Datos para Atención Primaria
 
+Esta rama sirve para ir añadiendo nuevas tablas al schema.
+
 Diseño de un esquema de base de datos relacional en PostgreSQL v18 para representar diferentes aspectos de la actividad asistencial y de la información clínica asociada a pacientes en un centro de atención primaria.
 
 Actualmente, el modelo contempla, entre otros:
