@@ -2,7 +2,7 @@
 
 ## Esquema
 
-Insertar foto aquí.
+<img src="schema.png">
 
 ## Registro de pacientes y personal
 
