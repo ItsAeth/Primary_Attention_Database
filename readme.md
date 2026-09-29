@@ -20,15 +20,15 @@ El proyecto utiliza datos completamente sintéticos.
 
 ## Instalación
 
-1 - Clonar el repositorio.
+1. Clonar el repositorio.
 
 ```bash
 git clone https://github.com/ItsAeth/Primary_Healthcare_DB.git
 cd Primary_Healthcare_DB
 ```
 
-2 - Crear una nueva base de datos y realizada la conexión a esta.
-3 - Ejecutar los scripts SQL del repositorio en el orden indicado. Los scripts se encuentran en la carpeta `database/`.
+2. Crear una nueva base de datos y realizada la conexión a esta.
+3. Ejecutar los scripts SQL del repositorio en el orden indicado. Los scripts se encuentran en la carpeta `database/`.
 
 ## Uso
 
