@@ -14,7 +14,7 @@ El proyecto utiliza datos completamente sintéticos.
 
 <img src="docs/schema.png">
 
-# Requerimientos
+## Requerimientos
 
 - PostgreSQL v18.
 
