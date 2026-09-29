@@ -1,28 +1,5 @@
 /*
 BASE DE DATOS PARA SISTEMA DE INFORMACIÓN DE UN CENTRO DE ATENCIÓN PRIMARIA (PostgreSQL v18)
-
-Funciones: 
-	Registro de pacientes y personal (
-		identificación, 
-		domicilio, 
-		contacto
-	)
-	Registro de actividad asistencial (
-		turnos del personal, 
-		citas, 
-		episodios
-	)
-	Registro de HCE (
-		antecedentes, 
-		alergias, 
-		dispositivos, 
-		tratamientos, 
-		vacunaciones, 
-		hábitos perjudiciales, 
-		uso de sustancias tóxicas
-	)
-*/
-
 /*
 EMPLEADOS (personal sanitario y no sanitario)
 	- Considera posibilidad de DNI/NIE duplicado y email compartidos.
@@ -186,7 +163,7 @@ CREATE TABLE IF NOT EXISTS registro_antecedente (
 	FOREIGN KEY (id_paciente) REFERENCES pacientes (id)
 );
 
--- TODO: la tabla de antecedentes familiares no está acabada
+-- Antecedentes familiares.
 CREATE TABLE IF NOT EXISTS registro_antecedentes_familiares(
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
@@ -228,7 +205,7 @@ CREATE TABLE IF NOT EXISTS registro_alergias (
 
 	id_snomed_alérgeno TEXT NOT NULL,
 
-	id_snomed_man_clin TEXT,	-- Igual, solo 1 y registrar cual es la terminología.
+	id_snomed_man_clin TEXT,
 	id_cie_man_clin TEXT,
 
 	cod_tipo_reacc_ehdsi TEXT NOT NULL,

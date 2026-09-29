@@ -152,3 +152,4 @@ ADD CONSTRAINT fecha_inicio_fin_validas CHECK (fecha_fin IS NULL OR fecha_fin >=
 ALTER TABLE IF EXISTS registro_formulas_magistrales
 ADD CONSTRAINT fecha_inicio_fin_validas CHECK (fecha_fin IS NULL OR fecha_fin >= fecha_inicio);
 
+ALTER TABLE IF EXISTS registro_situaciones_funcionales
