@@ -1,6 +1,6 @@
 /*
 BASE DE DATOS PARA SISTEMA DE INFORMACIÓN DE UN CENTRO DE ATENCIÓN PRIMARIA (PostgreSQL v18)
-/*
+
 EMPLEADOS (personal sanitario y no sanitario)
 	- Considera posibilidad de DNI/NIE duplicado y email compartidos.
 	- ZZZ indica país de nacimiento desconocido.
@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS pacientes (
 );
 
 -- Teléfonos fijos y móviles de pacientes. Formato con E.164 estricto (Ej. +34612345678)
-CREATE TABLE IF NOT EXISTS tlfno_pacientes (
+CREATE TABLE IF NOT EXISTS tlf_pacientes (
 	id_tlf BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
 	tipo_tlf TEXT NOT NULL,
@@ -164,7 +164,7 @@ CREATE TABLE IF NOT EXISTS registro_antecedente (
 );
 
 -- Antecedentes familiares.
-CREATE TABLE IF NOT EXISTS registro_antecedentes_familiares(
+CREATE TABLE IF NOT EXISTS registro_antecedentes_familiares (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
 
@@ -175,7 +175,7 @@ CREATE TABLE IF NOT EXISTS registro_antecedentes_familiares(
 	edad_inicio SMALLINT,
 
 	FOREIGN KEY (id_paciente) REFERENCES pacientes (id)
-)
+);
 
 /*
 Registro de dispositivos:
@@ -190,7 +190,7 @@ CREATE TABLE IF NOT EXISTS registro_dispositivo (
 
 	fecha_implantacion DATE,
 	fecha_retirada DATE,
-	id_dispositivo_fábrica TEXT
+	id_dispositivo_fábrica TEXT,
 
 	FOREIGN KEY (id_paciente) REFERENCES pacientes (id)
 );
@@ -246,7 +246,7 @@ CREATE TABLE IF NOT EXISTS registro_habitos (
 	anno_inicio SMALLINT,
 	anno_fin SMALLINT,
 
-	FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
+	FOREIGN KEY (id_paciente) REFERENCES pacientes (id)
 );
 
 /* 
@@ -259,7 +259,7 @@ CREATE TABLE IF NOT EXISTS registro_toxicos (
 	id_paciente BIGINT NOT NULL,
 
 	id_snomed_toxico TEXT NOT NULL,
-	id_snomed_patron_consumo TEXT
+	id_snomed_patron_consumo TEXT,
 	dosis DECIMAL,
 	ud_dosis TEXT,
 	anno_inicio SMALLINT,
@@ -276,14 +276,14 @@ Registro de medicamentos
 CREATE TABLE IF NOT EXISTS registro_medicamentos (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
-	cod_fármaco TEXT NOT NULL,
+	cod_farmaco TEXT NOT NULL,
 	cod_nombre_comercial TEXT,
 
 	fecha_inicio DATE NOT NULL,
 	fecha_fin DATE,
-	cod_via_admin_aemps, TEXT,
+	cod_via_admin_aemps TEXT,
 	cod_dosis_edqm TEXT NOT NULL,
-	Posología TEXT NOT NULL,
+	posologia TEXT NOT NULL,
 
 	FOREIGN KEY (id_paciente) REFERENCES pacientes (id)
 );
@@ -316,4 +316,4 @@ CREATE TABLE registro_situaciones_funcionales (
 	id_snomed_situacion_funcional TEXT NOT NULL,
 	
 	FOREIGN KEY (id_paciente) REFERENCES pacientes(id)
-)
+);
