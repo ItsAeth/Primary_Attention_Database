@@ -168,7 +168,7 @@ CREATE TABLE IF NOT EXISTS registro_antecedentes_familiares (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
 
-	id_snomed_antecedente TEXT NOT NULL
+	id_snomed_antecedente TEXT NOT NULL,
 	id_cie_antecedente TEXT,
 
 	id_gr_parentesco_snomed TEXT NOT NULL,
