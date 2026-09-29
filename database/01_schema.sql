@@ -149,12 +149,12 @@ REGISTRO DE ANTECEDENTES
 	- También para saber si la enfermedad sigue activa en el caso de antecedentes de enfermedad.
 	- No se incluye edad de inicio porque podria calcularse con la tabla de pacientes.
 */
-CREATE TABLE IF NOT EXISTS registro_antecedente (
+CREATE TABLE IF NOT EXISTS registro_antecedentes (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
 	tipo_antecedente TEXT NOT NULL,
 
-	id_snomed_antecedente TEXT NOT NULL,	-- Igual, solo 1 y registrar cual es la terminología.
+	id_snomed_antecedente TEXT NOT NULL,
 	id_CIE TEXT,
 
 	fecha_inicio DATE,
@@ -168,8 +168,8 @@ CREATE TABLE IF NOT EXISTS registro_antecedentes_familiares (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
 
-	id_snomed_antecedente TEXT NOT NULL,	-- Igual, solo 1 y registrar cual es la terminología.
-	id_cie_antecedente TEXT NOT NULL,
+	id_snomed_antecedente TEXT NOT NULL
+	id_cie_antecedente TEXT,
 
 	id_gr_parentesco_snomed TEXT NOT NULL,
 	edad_inicio SMALLINT,
@@ -177,20 +177,17 @@ CREATE TABLE IF NOT EXISTS registro_antecedentes_familiares (
 	FOREIGN KEY (id_paciente) REFERENCES pacientes (id)
 );
 
-/*
-Registro de dispositivos:
-	- Separados del resto de antecedentes al necesitar almecenar códigos de EMDN e ID de fábrica.
-*/
-CREATE TABLE IF NOT EXISTS registro_dispositivo (
+-- Registro de dispositivos:
+CREATE TABLE IF NOT EXISTS registro_dispositivos (
 	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_paciente BIGINT NOT NULL,
 
-	id_snomed_dispositivo TEXT NOT NULL,	-- Igual, solo 1 y registrar cual es la terminología.
-	cod_emdn_dispositivo TEXT NOT NULL,
+	id_snomed_dispositivo TEXT NOT NULL,
+	cod_emdn_dispositivo TEXT,
 
 	fecha_implantacion DATE,
 	fecha_retirada DATE,
-	id_dispositivo_fábrica TEXT,
+	id_dispositivo_fabrica TEXT,
 
 	FOREIGN KEY (id_paciente) REFERENCES pacientes (id)
 );

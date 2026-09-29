@@ -118,3 +118,104 @@ VALUES
 ('Seguimiento', 'Atención primaria', 'Seguimiento de enfermedad', '55822004', 'E78.5', 2, 1, '2026-09-23 11:00:00+02', '2026-09-23 11:20:00+02', NULL, '55822004', 'Control de hipercolesterolemia.', NULL),
 ('Urgencia', 'Centro de salud', 'Consulta urgente', '422587007', 'R11.0', 3, 2, '2026-09-24 15:00:00+02', '2026-09-24 15:30:00+02', 'Verde', '422587007', 'Náuseas sin otros síntomas de alarma.', 'Alta'),
 ('Prevención', 'Programa de prevención', 'Consulta preventiva', '268565007', 'Z00.00', 4, 3, '2026-09-25 09:00:00+02', '2026-09-25 09:30:00+02', NULL, '268565007', 'Revisión médica preventiva.', 'Alta');
+
+-- // Registros de historia clínica electronica
+
+-- Antecedentes (en general)
+INSERT INTO registro_antecedentes
+(id_paciente, tipo_antecedente, id_snomed_antecedente, id_CIE, fecha_inicio, fecha_fin)
+VALUES
+(1, 'Enfermedad previa', '38341003', 'I10', '2018-04-12', NULL),
+(2, 'Quirúrgico', '1337319005', 'Z98.89', '2015-06-20', NULL),
+(3, 'Social', '160903007', 'Z72.0', '2010-01-01', '2018-12-31'),
+(4, 'Profesional', '160903007', 'Z57.9', '2017-09-01', NULL),
+(5, 'Neonatal', '276654001', 'P07.3', '2000-12-03', NULL),
+(1, 'Obstétrico', '169320002', 'Z87.59', '2005-05-10', NULL);
+
+-- Antecedentes familiares
+INSERT INTO registro_antecedentes_familiares
+(id_paciente, id_snomed_antecedente, id_cie_antecedente, id_gr_parentesco_snomed, edad_inicio)
+VALUES
+(1, '38341003', 'I10', '72705000', 52),
+(2, '73211009', 'E11.9', '72704001', 61),
+(3, '56265001', 'C50.9', '72705000', 48),
+(4, '267432004', 'J45.909', '145341000119100', 35),
+(5, '44054006', 'E11.9', '72705000', 55);
+
+-- Dispositivos
+INSERT INTO registro_dispositivos
+(id_paciente, id_snomed_dispositivo, cod_emdn_dispositivo, fecha_implantacion, fecha_retirada, id_dispositivo_fabrica)
+VALUES
+(1, '36014003', 'P030301', '2020-03-15', NULL, 'SN001234567890123456'),
+(2, '86184003', 'P030101', '2018-07-20', '2024-05-10', 'SN002345678901234567'),
+(3, '70678003', 'P030201', '2022-11-04', NULL, 'SN003456789012345678'),
+(5, '36014003', 'P030301', '2021-02-18', NULL, NULL);
+
+-- Alergias
+INSERT INTO registro_alergias
+(id_paciente, id_snomed_alérgeno, id_snomed_man_clin, id_cie_man_clin, cod_tipo_reacc_ehdsi, cod_gravedad_ehdsi, cod_criticidad_ehdsi, cod_certeza_ehdsi, cod_estado_ehdsi, fecha_inicio, fecha_fin)
+VALUES
+(1, '387517004', '39579001', 'T88.7', 'ALLERGIC_REACTION', 'MILD', 'LOW', 'CONFIRMED', 'ACTIVE', '2019-06-12', NULL),
+(2, '300916003', '271807003', 'T78.1', 'ALLERGIC_REACTION', 'MODERATE', 'LOW', 'CONFIRMED', 'ACTIVE', '2021-03-20', NULL),
+(3, '764146007', '247472004', 'L27.0', 'ALLERGIC_REACTION', 'MILD', 'LOW', 'SUSPECTED', 'INACTIVE', '2018-05-01', '2020-08-15'),
+(5, '300916003', '39579001', 'T88.7', 'ALLERGIC_REACTION', 'MILD', 'LOW', 'CONFIRMED', 'ACTIVE', '2023-01-10', NULL);
+
+-- Vacunaciones
+INSERT INTO registro_vacunaciones
+(id_paciente, id_snomed_vacuna, cod_nom_comercial, fecha_admin, num_lote)
+VALUES
+(1, '111525008', 'COVID19-VAC', '2025-10-15', 'AB12345'),
+(1, 'IMM-001', 'GRIPE-VAC', '2025-10-20', 'GRI2025A01'),
+(2, '111525008', 'COVID19-VAC', '2025-09-18', 'AB67890'),
+(3, '111525008', 'COVID19-VAC', '2024-11-12', 'CD12345'),
+(4, 'IMM-001', 'GRIPE-VAC', '2025-10-22', NULL),
+(5, '111525008', 'COVID19-VAC', '2025-08-30', 'EF54321');
+
+-- Hábitos perjudiciales
+INSERT INTO registro_habitos
+(id_paciente, id_snomed_habito, anno_inicio, anno_fin)
+VALUES
+(1, '77176002', 1998, 2010),
+(2, '77176002', 1980, 2015),
+(3, '229819007', 2015, NULL),
+(4, '77176002', NULL, NULL),
+(5, '229819007', 2020, NULL);
+
+-- Tóxicos
+INSERT INTO registro_toxicos
+(id_paciente, id_snomed_toxico, id_snomed_patron_consumo, dosis, ud_dosis, anno_inicio, anno_fin)
+VALUES
+(1, '77176002', '225799002', 10, 'cigarrillos/día', 1998, 2010),
+(2, '56246009', '228276006', 2, 'unidades/día', 2000, 2018),
+(3, '266918002', '228276006', 1, 'unidades/semana', 2020, NULL),
+(4, '77176002', NULL, NULL, NULL, NULL, NULL),
+(5, '56246009', '225799002', 3, 'unidades/semana', 2022, NULL);
+
+-- Medicamentos
+INSERT INTO registro_medicamentos
+(id_paciente, cod_farmaco, cod_nombre_comercial, fecha_inicio, fecha_fin, cod_via_admin_aemps, cod_dosis_edqm, posologia)
+VALUES
+(1, 'C09AA05', 'ENALAPRIL', '2018-04-12', NULL, 'ORAL', 'MG', '1 comprimido cada 24 horas'),
+(2, 'C10AA01', 'SIMVASTATINA', '2020-02-01', NULL, 'ORAL', 'MG', '1 comprimido cada 24 horas'),
+(3, 'R03AC02', 'SALBUTAMOL', '2022-05-10', '2022-06-10', 'INHALACION', 'MG', '1 inhalación cuando sea necesario'),
+(4, 'N02BE01', 'PARACETAMOL', '2025-01-15', '2025-01-20', 'ORAL', 'MG', '1 comprimido cada 8 horas'),
+(5, 'A10BA02', 'METFORMINA', '2024-03-01', NULL, 'ORAL', 'MG', '1 comprimido cada 12 horas');
+
+-- Fórmulas magistrales
+INSERT INTO registro_formulas_magistrales
+(id_paciente, id_formula, fecha_inicio, fecha_fin, id_via_administracion, dosis, frecuencia)
+VALUES
+(1, 'FM-0001', '2024-01-10', '2024-01-20', 'ORAL', '10 mg', 'Cada 24 horas'),
+(2, 'FM-0002', '2023-06-15', NULL, 'TOPICA', '2%', 'Cada 12 horas'),
+(3, 'FM-0003', '2025-02-01', '2025-02-15', 'ORAL', '5 ml', 'Cada 8 horas'),
+(5, 'FM-0004', '2025-04-20', NULL, 'TOPICA', '1 aplicación', 'Cada 24 horas');
+
+-- Situaciones funcionales
+INSERT INTO registro_situaciones_funcionales
+(id_paciente, id_snomed_escala, resultado, interpretacion, id_snomed_situacion_funcional)
+VALUES
+(1, '273295006', '95', 'Independiente', '284196006'),
+(2, '273295006', '70', 'Dependencia leve', '248010001'),
+(3, '273295006', '100', 'Independiente', '284196006'),
+(4, '273295006', '45', 'Dependencia moderada', '248010001'),
+(5, '273295006', '85', 'Dependencia leve', '248010001');

@@ -97,6 +97,10 @@ ALTER TABLE IF EXISTS registro_antecedentes
 ADD CONSTRAINT cat_antencedente_valida CHECK (tipo_antecedente IN ('Enfermedad previa', 'Neonatal', 'Obstétrico', 'Quirúrgico', 'Social', 'Profesional')),
 ADD	CONSTRAINT fecha_inicio_fin_validas CHECK (fecha_fin > fecha_inicio OR fecha_fin IS NULL OR fecha_inicio IS NULL);
 
+-- Registros de antecedente familiar
+ALTER TABLE IF EXISTS registro_antecedentes_familiares
+ADD CONSTRAINT edad_inicio_valida CHECK (edad_inicio >= 0);
+
 /*
 Registros de dispositivo: 
 	- Fechas de implantación y retirada.
