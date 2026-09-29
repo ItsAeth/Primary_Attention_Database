@@ -123,8 +123,8 @@ CREATE TABLE IF NOT EXISTS episodio (
 	procedencia TEXT NOT NULL,
 	tipo_consulta TEXT NOT NULL,
 
-	id_snomed_motivo_consulta TEXT NOT NULL, -- Bastaria con uno (el que haya elegido el médico) y especificar cual es la terminología.
-	id_cie_motivo_consulta TEXT NOT NULL,
+	id_snomed_motivo_consulta TEXT NOT NULL,
+	id_cie_motivo_consulta TEXT,
 
 	id_paciente BIGINT NOT NULL,
 	id_sanitario BIGINT NOT NULL,
@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS episodio (
 	fin TIMESTAMPTZ NOT NULL,
 	nivel_triaje TEXT,
 
-	id_diag_snomed TEXT,	-- Este es snomed obligatoriamente
+	id_diag_snomed TEXT,
 
 	observaciones TEXT,
 	resultado TEXT,

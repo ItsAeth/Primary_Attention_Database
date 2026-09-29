@@ -79,7 +79,7 @@ ADD	CONSTRAINT estado_es_valido CHECK (estado IN ('Pendiente_aceptación', 'Acep
 
 -- Episodios: categorias válidas. Timestamp de fin posterior a timestamp de inicio.
 ALTER TABLE IF EXISTS episodios
-ADD	CONSTRAINT tipo_episodio_valido CHECK (tipo IN ('Seguimiento', 'Consulta', 'Urgencia', 'Prevención', 'Administrativo')),
+ADD	CONSTRAINT tipo_episodio_valido CHECK (tipo_episodio IN ('Seguimiento', 'Consulta', 'Urgencia', 'Prevención', 'Administrativo')),
 ADD	CONSTRAINT fecha_fin_mayor_inicio CHECK (fin > inicio),
 ADD	CONSTRAINT nivel_triaje_valido CHECK (nivel_triaje IS NULL OR nivel_triaje IN ('Azul', 'Verde', 'Amarillo', 'Naranja', 'Rojo')),
 ADD	CONSTRAINT resultado_valido CHECK (resultado IN ('Alta', 'Derivación', 'Pruebas'));
