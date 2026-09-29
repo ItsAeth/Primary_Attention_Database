@@ -94,7 +94,7 @@ ADD	CONSTRAINT id_cie_valido CHECK (length(id_cie_man_clin) BETWEEN 3 AND 7)
 
 -- Registros de antecedente: fechas de inicio y fin
 ALTER TABLE IF EXISTS registro_antecedentes
-ADD CONSTRAINT cat_antencedente_valida CHECK (tipo_antecedente IN ('Enfermedad previa', 'Neonatal', 'Obstétrico', 'Quirúrgico', 'Social', 'Profesional'))
+ADD CONSTRAINT cat_antencedente_valida CHECK (tipo_antecedente IN ('Enfermedad previa', 'Neonatal', 'Obstétrico', 'Quirúrgico', 'Social', 'Profesional')),
 ADD	CONSTRAINT fecha_inicio_fin_validas CHECK (fecha_fin > fecha_inicio OR fecha_fin IS NULL OR fecha_inicio IS NULL);
 
 /*
@@ -115,8 +115,7 @@ Registros de vacunaciones:
 	Formato del nº lote. TODO: son máximo 30 caracteres, exactamente igual a 30, o hay algun formato especial??
 */
 ALTER TABLE IF EXISTS registro_vacunaciones
-ADD	CONSTRAINT fecha_inicio_fin_validas CHECK (fecha_fin > fecha_inicio OR fecha_fin IS NULL OR fecha_inicio IS NULL),
-ADD CONSTRAINT num_lote_valido CHECK (length(num_lote) =< 30);
+ADD CONSTRAINT num_lote_valido CHECK (length(num_lote) <= 30);
 
 /*
 Registros de hábitos y registro de consumo de tóxicos. Misma lógica de años
@@ -146,10 +145,5 @@ Registros de medicamentos y fórmulas magistrales
 	- Años de inicio y fin pueden ser NULL. En caso de no serlo, deben ser enteros positivos.
 	- Si uno de los años es NULL, no se comparan. Si los dos se conocen, año de fin posterior a año de inicio
 */
-ALTER TABLE IF EXISTS registro_toxicos
-ADD CONSTRAINT fecha_inicio_fin_validas CHECK (fecha_fin IS NULL OR fecha_fin >= fecha_inicio);
-
 ALTER TABLE IF EXISTS registro_formulas_magistrales
 ADD CONSTRAINT fecha_inicio_fin_validas CHECK (fecha_fin IS NULL OR fecha_fin >= fecha_inicio);
-
-ALTER TABLE IF EXISTS registro_situaciones_funcionales
