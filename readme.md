@@ -32,7 +32,7 @@ cd Primary_Healthcare_DB
 
 ## Uso
 
-La base de datos puede utilizarse para realizar consultas SQL sobre la información de pacientes, personal, actividad asistencial e historia clínica.
+La base de datos puede utilizarse para realizar consultas SQL sobre la información de pacientes, personal, actividad asistencial e historia clínica. En `queries/queries.sql` se encuentran disponibles varias consultas de ejemplo.
 
 ## Fuentes y referencias
 
